@@ -19,13 +19,12 @@ way to see it (only the ones that are plausible with the dataset
 
 """
 
-
-
 import pandas
 from bs4 import BeautifulSoup
 import requests
 import pandas as pd
 import re
+import matplotlib.pyplot as plt
 
 url = "https://www.rottentomatoes.com/m/dune_2021/reviews"
 website_url = requests.get("https://www.rottentomatoes.com/m/dune_2021/reviews")
@@ -108,6 +107,7 @@ def number_score_to_common_score_converter(number_list):
         second_number = float(number_test[1])
 
         if second_number == 10:
+            common_denominator_list.append(f"{round(first_number, 1)}/10")
             continue
         x = (first_number * 10) / second_number
         x = round(x, 1)
@@ -115,13 +115,54 @@ def number_score_to_common_score_converter(number_list):
     return common_denominator_list
 
 
+def remove_nan_from_list(complete_list):
+    data_only_list = []
+    for x in complete_list:
+        if x == "NaN":
+            continue
+        data_only_list.append(x)
+    return data_only_list
+
+
+def occurrences_of_scores(number_only_list):
+    occurrence_dict = {"0": 0, "1": 0, "2": 0, "3": 0, "4": 0,
+                       "5": 0, "6": 0, "7": 0, "8": 0, "9": 0, "10": 0}
+    total_occurrence_of_score = []
+    occurrence_score_start_number = []
+    for score in number_only_list:
+        occurrence_dict[score[0]] += 1
+
+    for key in occurrence_dict:
+        if occurrence_dict[key] != 0:
+            print(key, occurrence_dict[key])
+            occurrence_score_start_number.append(key)
+            total_occurrence_of_score.append(occurrence_dict[key])
+
+    return [occurrence_score_start_number, total_occurrence_of_score]
+
+
 review_with_missing_scores = create_review_lists()
 review_without_missing_scores = nan_score_adder(review_with_missing_scores)
 non_equal_number_review = letter_score_to_number_score_converter(review_without_missing_scores)
 common_denom_scores_with_nan = number_score_to_common_score_converter(non_equal_number_review)
+data_without_nan = remove_nan_from_list(common_denom_scores_with_nan)
+data_without_nan.sort()
+graphical_list = occurrences_of_scores(data_without_nan)
 
-df = pd.DataFrame(common_denom_scores_with_nan, columns=['Score'])
-print(df)
+df = pd.DataFrame(data_without_nan, columns=['Score'])
 
+"""
+suggestions on data representation:
+stacked bar chart, bar histogram, scatter plot, 
+"""
 
+# ax.bar(scores, occurrences)
+scores = graphical_list[0]
+occurrences = graphical_list[1]
 
+fig = plt.figure()
+plt.bar(scores, occurrences)
+plt.ylabel('Occurrences')
+plt.xlabel("Score")
+plt.title("Starting Value of Each Score for Dune Reviews")
+plt.show()
