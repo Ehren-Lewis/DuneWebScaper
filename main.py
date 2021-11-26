@@ -6,6 +6,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import ElementNotInteractableException
 import time
+import functools
 
 """
 This is a webscraping/ some sort of automation project. To actually get me started, this first py will be a
@@ -19,13 +20,10 @@ brainstorming area to see what I may want to webscrape, the intentions, etc...
 
 """
 """
-Second iteration: show all reviews on the website
-Third iteration: filter review by the types,
-fourth iterations: search by movie that you want to see the results for
-
-feature: have a default way they want to show the data, then ask if they want a specific
-way to see it (only the ones that are plausible with the dataset
-
+Second iteration: show all reviews on the website : done 
+Third iteration: filter review by the types : wip
+Fourth iteration: add more ways to represent data
+Fifth iterations: search by movie that you want to see the results for
 """
 
 
@@ -167,6 +165,19 @@ stacked bar chart, bar histogram, scatter plot,
 """
 
 
+def been_called(func):
+    @functools.wraps(func)
+    def is_it_called(*args, **kwargs):
+        is_it_called.has_been_called = True
+        return func(*args, **kwargs)
+
+    is_it_called.has_been_called = False
+    return is_it_called
+
+
+
+
+
 def selenium_initializer():
     full_review_list = []
     count = 0
@@ -174,44 +185,107 @@ def selenium_initializer():
 
     with webdriver.Chrome(service=s) as driver:
         new_url = driver.get("https://www.rottentomatoes.com/m/dune_2021/reviews")
+        """
+        try:  # top critics rating
+             driver.find_element(By.XPATH, '//*[@id="content"]/div/div/nav[1]/ul/li[2]/a').click()
+        except Exception as e:
+            print(e)
+        try: # by all critics
+            driver.find_element(By.XPATH, '//*[@id="content"]/div/div/nav[1]/ul/li[1]/a').click()
+        except Exception as e:
+            print(e)
+        """
+
+        @been_called
+        def all_critics():
+            try:
+                driver.find_element(By.XPATH, '//*[@id="content"]/div/div/nav[1]/ul/li[3]/a').click()
+            except Exception as e:
+                print(e)
+
+        @been_called
+        def top_critics():
+            try:
+                driver.find_element(By.XPATH, '//*[@id="content"]/div/div/nav[1]/ul/li[4]/a').click()
+            except Exception as e:
+                print(e)
+
+        @been_called
+        def all_audience():
+            try:
+                driver.find_element(By.XPATH, '//*[@id="content"]/div/div/nav[1]/ul/li[3]/a').click()
+            except Exception as e:
+                print(e)
+
+        @been_called
+        def verified_audience():
+            try:
+                driver.find_element(By.XPATH, '//*[@id="content"]/div/div/nav[1]/ul/li[4]/a').click()
+            except Exception as e:
+                print(e)
+
         while True:  # change to has next page instead
             html = driver.page_source
             soup_2 = BeautifulSoup(html, 'html.parser')
-            small_review_2 = soup_2.find_all("div", {"class": "small subtle review-link"})
-            for _ in small_review_2:
-                count += 1
-                non_split_review_2 = _.get_text(strip=True)
-                full_review_list.append(non_split_review_2)
-            try:
+            """
+            if all_critics.has_been_called or top_critics.has_been_called:
+                small_review_2 = soup_2.find_all("div", {"class": "small subtle review-link"})  # for critics
+                for _ in small_review_2:
+                    count += 1
+                    non_split_review_2 = _.get_text(strip=True)
+                    full_review_list.append(non_split_review_2)
+
+            elif all_audience.has_been_called or verified_audience.has_been_called: 
+                new_souped_data = soup_2.find_all('span', {"class": "star-display"})  # for audience
+                for i in new_souped_data:
+                    full_stars = i.findAll('span', {'class': 'star-display__filled'})
+                    half_stars = i.findAll('span', {'class': 'star-display__half'})
+                    out_of = len(full_stars) + len(half_stars) * .5
+                    print(f"{out_of}/5")
+            """
+            break
+
+            """
+            try:  # where the next may be, works with critics, not audience
                 driver.find_element(By.XPATH, '//*[@id="content"]/div/div/div/nav/button[2]').click()
+                driver.find_element(By.XPATH, '//*[@id="content"]/div/div/nav[3]/button[2]/span').click()
+                time.sleep(.1)
+            except ElementNotInteractableException:
+                print(f"{count} first count")
+                return full_review_list
+            """
+
+            try:
+                driver.find_element(By.XPATH, '//*[@id="content"]/div/div/nav[3]/button[2]/span').click()
                 time.sleep(.1)
             except ElementNotInteractableException:
                 print(f"{count} first count")
                 return full_review_list
 
 
-review_with_missing_scores = selenium_initializer()
-review_without_missing_scores = nan_score_adder(review_with_missing_scores)
-non_equal_number_review = letter_score_to_number_score_converter(review_without_missing_scores)
-common_denom_scores_with_nan = number_score_to_common_score_converter(non_equal_number_review)
-data_without_nan = remove_nan_from_list(common_denom_scores_with_nan)
-data_without_nan.sort()
-graphical_list = occurrences_of_scores(data_without_nan)
+def bar_graph_data_representation(proper_list):
+    scores = proper_list[0]
+    occurrences = proper_list[1]
+    plt.figure()
+    plt.bar(scores, occurrences)
+    plt.ylabel('Occurrences')
+    plt.xlabel("Score")
+    plt.title("Starting Value of Each Score for Dune Reviews")
+    plt.show()
 
-df = pd.DataFrame(data_without_nan, columns=['Score'])
+# review_with_missing_scores = selenium_initializer()
+# review_without_missing_scores = nan_score_adder(review_with_missing_scores)
+# non_equal_number_review = letter_score_to_number_score_converter(review_without_missing_scores)
+# common_denom_scores_with_nan = number_score_to_common_score_converter(non_equal_number_review)
+# data_without_nan = remove_nan_from_list(common_denom_scores_with_nan)
+# data_without_nan.sort()
+# graphical_list = occurrences_of_scores(data_without_nan)
+#
+# df = pd.DataFrame(data_without_nan, columns=['Score'])
 
-scores = graphical_list[0]
-occurrences = graphical_list[1]
 
-fig = plt.figure()
-plt.bar(scores, occurrences)
-plt.ylabel('Occurrences')
-plt.xlabel("Score")
-plt.title("Starting Value of Each Score for Dune Reviews")
-plt.show()
-
-print(len(review_with_missing_scores))
-print(len(review_without_missing_scores))
-print(len(non_equal_number_review))
-print(len(common_denom_scores_with_nan))
-print(len(data_without_nan))
+# print(len(review_with_missing_scores))
+# print(len(review_without_missing_scores))
+# print(len(non_equal_number_review))
+# print(len(common_denom_scores_with_nan))
+# print(len(data_without_nan))
