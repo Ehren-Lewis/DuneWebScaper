@@ -4,16 +4,15 @@ import matplotlib.pyplot as plt
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import ElementNotInteractableException
-import time
+from selenium.common.exceptions import ElementNotInteractableException, TimeoutException, NoSuchElementException
 import functools
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 """
 This is a webscraping/ some sort of automation project. To actually get me started, this first py will be a
 brainstorming area to see what I may want to webscrape, the intentions, etc...
 
-- After data has been scraped, clean it, analyze it, then display in matplotlib
-- How should automation play a role? Maybe two separate projects?
 - What libraries can I use to make this simpler?
 - BeautifulSoup, Requests, MatPlotLib, Sqlite3, Pandas, Numpy
 
@@ -21,9 +20,11 @@ brainstorming area to see what I may want to webscrape, the intentions, etc...
 """
 """
 Second iteration: show all reviews on the website : done 
-Third iteration: filter review by the types : wip
-Fourth iteration: add more ways to represent data
-Fifth iterations: search by movie that you want to see the results for
+Third iteration: filter review by the types : done
+Fourth iteration: add more ways to represent data : wip
+Fifth iteration: search by movie that you want to see the results for
+Sixth iteration: Create a Gui, ask which data (maybe how much they want), 
+and how they would like to present the data
 """
 
 
@@ -35,7 +36,7 @@ def nan_score_adder(missing_score_list: list):  # no errors at all
     full_review_without_missing_scores = []
     for i in missing_score_list:
         append_string = i
-        if not find_char(i, "Original Score"):
+        if not find_char(append_string, "Original Score"):
             append_string += "| Original Score: NaN"
         full_review_without_missing_scores.append(append_string.split(": ")[1])
     return full_review_without_missing_scores
@@ -143,25 +144,31 @@ def remove_nan_from_list(complete_list):
     return data_only_list
 
 
+# look at fixing this one for data representation
 def occurrences_of_scores(number_only_list):
-    occurrence_dict = {"0": 0, "1": 0, "2": 0, "3": 0, "4": 0,
-                       "5": 0, "6": 0, "7": 0, "8": 0, "9": 0, "10": 0}
+    count = 0
+    test_occurrence_dict = {}
     total_occurrence_of_score = []
     occurrence_score_start_number = []
     for score in number_only_list:
-        occurrence_dict[score[0]] += 1
+        if score in test_occurrence_dict:
+            test_occurrence_dict[score] += 1
+        elif score not in test_occurrence_dict:
+            test_occurrence_dict[score] = 0
+        count += 1
 
-    for key in occurrence_dict:
-        if occurrence_dict[key] != 0:
+    for key in test_occurrence_dict:
+        if test_occurrence_dict[key] != 0:
             occurrence_score_start_number.append(key)
-            total_occurrence_of_score.append(occurrence_dict[key])
+            total_occurrence_of_score.append(test_occurrence_dict[key])
 
-    return [occurrence_score_start_number, total_occurrence_of_score]
+    return [occurrence_score_start_number, total_occurrence_of_score, count]  # look a fi  # look atf
 
 
 """
 suggestions on data representation:
 stacked bar chart, bar histogram, scatter plot, 
+pie chart, 
 """
 
 
@@ -175,92 +182,111 @@ def been_called(func):
     return is_it_called
 
 
+def how_big_data_size():
+    data_size = ''
+    while not data_size.isnumeric():
+        data_size = input("How big would you like the dataset to be? (whole numbers only)")
 
+    return int(data_size)
 
 
 def selenium_initializer():
     full_review_list = []
-    count = 0
     s = Service("C:/Webdriver/bin/chromedriver.exe")
 
     with webdriver.Chrome(service=s) as driver:
-        new_url = driver.get("https://www.rottentomatoes.com/m/dune_2021/reviews")
-        """
-        try:  # top critics rating
-             driver.find_element(By.XPATH, '//*[@id="content"]/div/div/nav[1]/ul/li[2]/a').click()
-        except Exception as e:
-            print(e)
-        try: # by all critics
-            driver.find_element(By.XPATH, '//*[@id="content"]/div/div/nav[1]/ul/li[1]/a').click()
-        except Exception as e:
-            print(e)
-        """
+        driver.get("https://www.rottentomatoes.com/m/dune_2021/reviews")
 
         @been_called
         def all_critics():
             try:
-                driver.find_element(By.XPATH, '//*[@id="content"]/div/div/nav[1]/ul/li[3]/a').click()
+                driver.find_element(By.XPATH, '//*[@id="content"]/div/div/nav[1]/ul/li[1]/a').click()
+                return_button = driver.find_element(By.XPATH, '//*[@id="content"]/div/div/div/nav/button[2]/span')
             except Exception as e:
                 print(e)
+            else:
+                return return_button
 
         @been_called
         def top_critics():
             try:
-                driver.find_element(By.XPATH, '//*[@id="content"]/div/div/nav[1]/ul/li[4]/a').click()
-            except Exception as e:
+                driver.find_element(By.XPATH, '//*[@id="content"]/div/div/nav[1]/ul/li[2]/a').click()
+                button = driver.find_element(By.XPATH, '//*[@id="content"]/div/div/div/nav[1]/button[2]/span')
+            except NoSuchElementException as e:
                 print(e)
+            else:
+                return button
 
         @been_called
         def all_audience():
             try:
                 driver.find_element(By.XPATH, '//*[@id="content"]/div/div/nav[1]/ul/li[3]/a').click()
+                button = driver.find_element(By.XPATH, '//*[@id="content"]/div/div/nav[3]/button[2]')
             except Exception as e:
                 print(e)
+            else:
+                return button
 
         @been_called
         def verified_audience():
             try:
                 driver.find_element(By.XPATH, '//*[@id="content"]/div/div/nav[1]/ul/li[4]/a').click()
+                button = driver.find_element(By.XPATH, '//*[@id="content"]/div/div/nav[3]/button[2]/span')
             except Exception as e:
                 print(e)
+            else:
+                return button
 
-        while True:  # change to has next page instead
+        def critic_parser(parser_info):
+            append_list = []
+            review_info = parser_info.find_all("div", {"class": "small subtle review-link"})
+            for i in review_info:
+                append_list.append(i.get_text(strip=True))
+            return append_list
+
+        def audience_parser(parser_info):
+            append_list = []
+            review_info = parser_info.find_all('span', {"class": "star-display"})
+            for star in review_info:
+                full_stars = star.findAll('span', {'class': 'star-display__filled'})
+                half_stars = star.findAll('span', {'class': 'star-display__half'})
+                out_of = len(full_stars) + len(half_stars) * .5
+                append_list.append(f"{out_of * 2}/10")
+            return append_list
+
+        final_button = top_critics()
+        global full_review
+        full_review = False
+        print(dir(final_button))
+
+        while True:
             html = driver.page_source
             soup_2 = BeautifulSoup(html, 'html.parser')
-            """
-            if all_critics.has_been_called or top_critics.has_been_called:
-                small_review_2 = soup_2.find_all("div", {"class": "small subtle review-link"})  # for critics
-                for _ in small_review_2:
-                    count += 1
-                    non_split_review_2 = _.get_text(strip=True)
-                    full_review_list.append(non_split_review_2)
-
-            elif all_audience.has_been_called or verified_audience.has_been_called: 
-                new_souped_data = soup_2.find_all('span', {"class": "star-display"})  # for audience
-                for i in new_souped_data:
-                    full_stars = i.findAll('span', {'class': 'star-display__filled'})
-                    half_stars = i.findAll('span', {'class': 'star-display__half'})
-                    out_of = len(full_stars) + len(half_stars) * .5
-                    print(f"{out_of}/5")
-            """
-            break
-
-            """
-            try:  # where the next may be, works with critics, not audience
-                driver.find_element(By.XPATH, '//*[@id="content"]/div/div/div/nav/button[2]').click()
-                driver.find_element(By.XPATH, '//*[@id="content"]/div/div/nav[3]/button[2]/span').click()
-                time.sleep(.1)
-            except ElementNotInteractableException:
-                print(f"{count} first count")
-                return full_review_list
-            """
 
             try:
-                driver.find_element(By.XPATH, '//*[@id="content"]/div/div/nav[3]/button[2]/span').click()
-                time.sleep(.1)
-            except ElementNotInteractableException:
-                print(f"{count} first count")
+                # WebDriverWait(driver, 5). \
+                #     until(EC.element_to_be_clickable((By.XPATH,
+                #                                       '//*[@id="content"]/div/div/div/nav[1]/button[2]/span')))
+                WebDriverWait(driver, 5). \
+                    until(EC.element_to_be_clickable(final_button))
+            except TimeoutException:
+                if not final_button.is_displayed():
+                    full_review = True
+                if len(full_review_list) == 0:
+                    driver.close()
+                    break
                 return full_review_list
+
+
+            if all_critics.has_been_called or top_critics.has_been_called:
+                for individual_review in critic_parser(soup_2):
+                    full_review_list.append(individual_review)
+                final_button.click()
+
+            elif all_audience.has_been_called or verified_audience.has_been_called:
+                for other_review in audience_parser(soup_2):
+                    full_review_list.append(other_review)
+                final_button.click()
 
 
 def bar_graph_data_representation(proper_list):
@@ -273,19 +299,54 @@ def bar_graph_data_representation(proper_list):
     plt.title("Starting Value of Each Score for Dune Reviews")
     plt.show()
 
-# review_with_missing_scores = selenium_initializer()
+
+def pie_chart_representation(proper_list):
+    scores = proper_list[0]
+    sizes = [x / proper_list[2] for x in proper_list[1]]
+    plt.figure()
+    plt.pie(sizes, labels=scores, autopct='%1.1f%%')
+    plt.show()
+
+
+#
+review_with_missing_scores = selenium_initializer()
 # review_without_missing_scores = nan_score_adder(review_with_missing_scores)
 # non_equal_number_review = letter_score_to_number_score_converter(review_without_missing_scores)
 # common_denom_scores_with_nan = number_score_to_common_score_converter(non_equal_number_review)
 # data_without_nan = remove_nan_from_list(common_denom_scores_with_nan)
-# data_without_nan.sort()
-# graphical_list = occurrences_of_scores(data_without_nan)
+# sorted_data = sorted(data_without_nan, key = lambda x: (len(x), x))
 #
-# df = pd.DataFrame(data_without_nan, columns=['Score'])
+# graphical_list = occurrences_of_scores(sorted_data)
+#
+# df = pd.DataFrame(sorted_data, columns=['Score'])
+#
+# bar_graph_data_representation(graphical_list)
 
 
-# print(len(review_with_missing_scores))
-# print(len(review_without_missing_scores))
-# print(len(non_equal_number_review))
-# print(len(common_denom_scores_with_nan))
-# print(len(data_without_nan))
+def search_with_selenium():
+    s = Service("C:/Webdriver/bin/chromedriver.exe")
+
+    movie_to_search = input("What movie would you like to search for?")
+
+    search_url = f'https://www.rottentomatoes.com/search?search={movie_to_search}'
+
+    with webdriver.Chrome(service=s) as driver:
+        driver.get(search_url)
+        driver.implicitly_wait(10)
+        driver.find_element(By.XPATH,
+                            '//*[@id="main-page-content"]/div/section[1]/search-page-result-container/nav/ul/li[2]'). \
+            click()
+
+        html_info = driver.page_source
+        soup_info = BeautifulSoup(html_info, 'html.parser')
+        movie_names = soup_info.find_all('a', {'class': 'unset'})
+
+        for i in movie_names:
+            print(i)
+
+        # print(soup_info.prettify())
+
+        driver.implicitly_wait(10)
+
+
+# search_with_selenium()
