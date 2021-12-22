@@ -72,39 +72,6 @@ def letter_score_to_number_score_converter(string_list: list):  # no more errors
 
 def number_score_to_common_score_converter(number_list):
     common_denominator_list = []
-    # for numb_str in number_list:
-    #     if numb_str == "NaN":
-    #         common_denominator_list.append(numb_str)
-    #         continue
-    #     elif len(numb_str) == 1 and numb_str.isalpha():
-    #         common_denominator_list.append(f"{numb_str}/10")
-    #         continue
-    #     number_test = numb_str.split("/")
-    #     try:
-    #         first_number = float(number_test[0])
-    #     except IndexError as e:
-    #         print(e, numb_str, 'first number')
-    #     except ValueError as e:
-    #         print(e, numb_str, 'first number')
-    #
-    #     try:
-    #         second_number = float(number_test[1])
-    #     except IndexError as e:
-    #         print(e)
-    #         print(numb_str)
-    #     except ValueError as e:
-    #         print(e)
-    #         print(numb_str)
-    #
-    #     if second_number == 10:
-    #         common_denominator_list.append(f"{round(first_number, 1)}/10")
-    #         continue
-    #     x = (first_number * 10) / second_number
-    #     x = round(x, 1)
-    #     common_denominator_list.append(f"{x}/10")
-    # print(number_of_errors)
-    # return common_denominator_list
-
     for numb_str in number_list:
         new_str = numb_str
         if new_str == "NaN":
@@ -257,16 +224,12 @@ def selenium_initializer():
         final_button = top_critics()
         global full_review
         full_review = False
-        print(dir(final_button))
 
         while True:
             html = driver.page_source
             soup_2 = BeautifulSoup(html, 'html.parser')
 
             try:
-                # WebDriverWait(driver, 5). \
-                #     until(EC.element_to_be_clickable((By.XPATH,
-                #                                       '//*[@id="content"]/div/div/div/nav[1]/button[2]/span')))
                 WebDriverWait(driver, 5). \
                     until(EC.element_to_be_clickable(final_button))
             except TimeoutException:
@@ -277,16 +240,23 @@ def selenium_initializer():
                     break
                 return full_review_list
 
-
             if all_critics.has_been_called or top_critics.has_been_called:
                 for individual_review in critic_parser(soup_2):
                     full_review_list.append(individual_review)
-                final_button.click()
+                try:
+                    final_button.click()
+                except ElementNotInteractableException:
+                    driver.close()
+                    break
 
             elif all_audience.has_been_called or verified_audience.has_been_called:
                 for other_review in audience_parser(soup_2):
                     full_review_list.append(other_review)
-                final_button.click()
+                try:
+                    final_button.click()
+                except ElementNotInteractableException:
+                    driver.close()
+                    break
 
 
 def bar_graph_data_representation(proper_list):
@@ -308,14 +278,13 @@ def pie_chart_representation(proper_list):
     plt.show()
 
 
-#
-review_with_missing_scores = selenium_initializer()
+# review_with_missing_scores = selenium_initializer()
 # review_without_missing_scores = nan_score_adder(review_with_missing_scores)
 # non_equal_number_review = letter_score_to_number_score_converter(review_without_missing_scores)
 # common_denom_scores_with_nan = number_score_to_common_score_converter(non_equal_number_review)
 # data_without_nan = remove_nan_from_list(common_denom_scores_with_nan)
-# sorted_data = sorted(data_without_nan, key = lambda x: (len(x), x))
-#
+# sorted_data = sorted(data_without_nan, key=lambda x: (len(x), x))
+# #
 # graphical_list = occurrences_of_scores(sorted_data)
 #
 # df = pd.DataFrame(sorted_data, columns=['Score'])
@@ -326,27 +295,47 @@ review_with_missing_scores = selenium_initializer()
 def search_with_selenium():
     s = Service("C:/Webdriver/bin/chromedriver.exe")
 
-    movie_to_search = input("What movie would you like to search for?")
+    # movie_to_search = input("What movie would you like to search for?")
+    movie_to_search = 'Dune'
 
     search_url = f'https://www.rottentomatoes.com/search?search={movie_to_search}'
 
     with webdriver.Chrome(service=s) as driver:
         driver.get(search_url)
         driver.implicitly_wait(10)
-        driver.find_element(By.XPATH,
-                            '//*[@id="main-page-content"]/div/section[1]/search-page-result-container/nav/ul/li[2]'). \
-            click()
+        try:
+            driver.find_element(By.XPATH,
+                            '//*[@id="main-page-content"]/div/section[1]/search-page-result-container/nav/ul/li[2]').click()
+        except NoSuchElementException:
+            driver.close()
+            print("sorry, there were no results to display")
+            return
 
         html_info = driver.page_source
         soup_info = BeautifulSoup(html_info, 'html.parser')
+
         movie_names = soup_info.find_all('a', {'class': 'unset'})
+        movie_name_test = soup_info.find_all('a', {'data-qa': 'thumbnail-link'})
+        href_list = []
+        src_list = []
+        names_list = []
+        return_list = []
 
-        for i in movie_names:
-            print(i)
+        for movie in movie_name_test:
+            src = movie.contents[1]
+            src_list.append(src.attrs['src'])
+            href_list.append(movie['href'])
+            names_list.append(src.attrs['alt'])
 
-        # print(soup_info.prettify())
+        for i in range(len(href_list)):
+            return_list.append((names_list[i], href_list[i], src_list[i]))
+
+
+        return return_list
 
         driver.implicitly_wait(10)
 
+search_with_selenium()
 
-# search_with_selenium()
+
+
