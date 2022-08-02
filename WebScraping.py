@@ -292,11 +292,10 @@ def pie_chart_representation(proper_list):
 # bar_graph_data_representation(graphical_list)
 
 
-def search_with_selenium():
+def search_with_selenium(movie_to_search="Dune"):
     s = Service("C:/Webdriver/bin/chromedriver.exe")
 
     # movie_to_search = input("What movie would you like to search for?")
-    movie_to_search = 'Dune'
 
     search_url = f'https://www.rottentomatoes.com/search?search={movie_to_search}'
 
