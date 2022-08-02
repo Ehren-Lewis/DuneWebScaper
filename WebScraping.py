@@ -2,12 +2,15 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import matplotlib.pyplot as plt
 from selenium import webdriver
+from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import ElementNotInteractableException, TimeoutException, NoSuchElementException
 import functools
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium import webdriver
+
 
 """
 This is a webscraping/ some sort of automation project. To actually get me started, this first py will be a
@@ -71,6 +74,7 @@ def letter_score_to_number_score_converter(string_list: list):  # no more errors
 
 
 def number_score_to_common_score_converter(number_list):
+    print(number_list)
     common_denominator_list = []
     for numb_str in number_list:
         new_str = numb_str
@@ -102,6 +106,51 @@ def number_score_to_common_score_converter(number_list):
     return common_denominator_list
 
 
+
+def new_number_score_to_common_score_converter(number_list):
+    only_number = []
+    for i in range(len(number_list)):
+        if (number_list[i] != "NaN"):
+            only_number.append(number_list[i])
+
+
+
+    common_denominator_list = []
+    for numb_str in only_number:
+        new_str = numb_str
+        if len(new_str) == 1 and new_str.isnumeric():
+            common_denominator_list.append(f"{new_str}/10")
+            continue
+        first_number = None
+        second_number = None
+        try:
+            number_test = new_str.split("/")
+            first_number = float(number_test[0])
+            second_number = float(number_test[1])
+        except ValueError:
+            if find_char(new_str, "out of"):
+                out_of_string = new_str.split(" ")
+                first_number = float(out_of_string[0])
+                second_number = float(out_of_string[-1])
+        except IndexError as e:
+            continue
+
+        finally:
+            try:
+                if second_number == 10:
+                    common_denominator_list.append(f"{round(first_number, 1)}/10")
+                    continue
+                x = (first_number * 10) / second_number
+                x = round(x, 1)
+                common_denominator_list.append(f"{x}/10")
+            except TypeError as e:
+                print(new_str)
+                print(numb_str)
+
+
+    return common_denominator_list
+
+#  Testing new code
 def remove_nan_from_list(complete_list):
     data_only_list = []
     for x in complete_list:
@@ -131,7 +180,6 @@ def occurrences_of_scores(number_only_list):
 
     return [occurrence_score_start_number, total_occurrence_of_score, count]  # look a fi  # look atf
 
-
 """
 suggestions on data representation:
 stacked bar chart, bar histogram, scatter plot, 
@@ -159,8 +207,8 @@ def how_big_data_size():
 
 def selenium_initializer():
     full_review_list = []
-    s = Service("C:/Webdriver/bin/chromedriver.exe")
-
+    # s = Service("C:/Webdriver/bin/chromedriver.exe")
+    s = Service("C:\Program Files\Google\Chrome\Application\chromedriver.exe")
     with webdriver.Chrome(service=s) as driver:
         driver.get("https://www.rottentomatoes.com/m/dune_2021/reviews")
 
@@ -177,7 +225,8 @@ def selenium_initializer():
         @been_called
         def top_critics():
             try:
-                driver.find_element(By.XPATH, '//*[@id="content"]/div/div/nav[1]/ul/li[2]/a').click()
+                # driver.find_element(By.XPATH, '//*[@id="content"]/div/div/nav[1]/ul/li[2]/a').click()
+                # button = driver.find_element(By.XPATH, '//*[@id="content"]/div/div/div/nav[1]/button[2]/span')
                 button = driver.find_element(By.XPATH, '//*[@id="content"]/div/div/div/nav[1]/button[2]/span')
             except NoSuchElementException as e:
                 print(e)
@@ -230,8 +279,7 @@ def selenium_initializer():
             soup_2 = BeautifulSoup(html, 'html.parser')
 
             try:
-                WebDriverWait(driver, 5). \
-                    until(EC.element_to_be_clickable(final_button))
+                WebDriverWait(driver, 5).until(EC.element_to_be_clickable(final_button))
             except TimeoutException:
                 if not final_button.is_displayed():
                     full_review = True
@@ -278,18 +326,20 @@ def pie_chart_representation(proper_list):
     plt.show()
 
 
-# review_with_missing_scores = selenium_initializer()
-# review_without_missing_scores = nan_score_adder(review_with_missing_scores)
-# non_equal_number_review = letter_score_to_number_score_converter(review_without_missing_scores)
-# common_denom_scores_with_nan = number_score_to_common_score_converter(non_equal_number_review)
-# data_without_nan = remove_nan_from_list(common_denom_scores_with_nan)
-# sorted_data = sorted(data_without_nan, key=lambda x: (len(x), x))
-# #
-# graphical_list = occurrences_of_scores(sorted_data)
-#
-# df = pd.DataFrame(sorted_data, columns=['Score'])
-#
-# bar_graph_data_representation(graphical_list)
+review_with_missing_scores = selenium_initializer()
+print(review_with_missing_scores)
+review_without_missing_scores = nan_score_adder(review_with_missing_scores)
+non_equal_number_review = letter_score_to_number_score_converter(review_without_missing_scores)
+# common_denom_scores_with_nan = new_number_score_to_common_score_converter(non_equal_number_review)
+data_without_nan = new_number_score_to_common_score_converter(non_equal_number_review)
+sorted_data = sorted(data_without_nan, key=lambda x: (len(x), x))
+
+graphical_list = occurrences_of_scores(sorted_data)
+
+df = pd.DataFrame(sorted_data, columns=['Score'])
+
+bar_graph_data_representation(graphical_list)
+# pie_chart_representation(graphical_list)
 
 
 def search_with_selenium(movie_to_search="Dune"):
@@ -309,6 +359,8 @@ def search_with_selenium(movie_to_search="Dune"):
             driver.close()
             print("sorry, there were no results to display")
             return
+
+
 
         html_info = driver.page_source
         soup_info = BeautifulSoup(html_info, 'html.parser')
@@ -334,7 +386,7 @@ def search_with_selenium(movie_to_search="Dune"):
 
         driver.implicitly_wait(10)
 
-search_with_selenium()
+# search_with_selenium()
 
 
 
