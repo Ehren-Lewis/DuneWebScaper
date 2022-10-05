@@ -11,6 +11,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium import webdriver
 import chromedriver_autoinstaller
+chromedriver_autoinstaller.install()
 
 
 """
@@ -75,7 +76,6 @@ def letter_score_to_number_score_converter(string_list: list):  # no more errors
 
 
 def number_score_to_common_score_converter(number_list):
-    print(number_list)
     common_denominator_list = []
     for numb_str in number_list:
         new_str = numb_str
@@ -206,12 +206,13 @@ def how_big_data_size():
     return int(data_size)
 
 
-chromedriver_autoinstaller.install()
+
 
 def selenium_initializer():
     full_review_list = []
     # s = Service("C:/Webdriver/bin/chromedriver.exe")
-    s = Service("C:\Program Files\Google\Chrome\Application\chromedriver.exe")
+    # s = Service("C:\Program Files\Google\Chrome\Application\chromedriver.exe")
+    s = Service(chromedriver_autoinstaller.install())
     # s = Service("./driver/Application/chromedriver.exe")
     with webdriver.Chrome(service=s) as driver:
         driver.get("https://www.rottentomatoes.com/m/dune_2021/reviews")
@@ -331,7 +332,6 @@ def pie_chart_representation(proper_list):
 
 
 review_with_missing_scores = selenium_initializer()
-print(review_with_missing_scores)
 review_without_missing_scores = nan_score_adder(review_with_missing_scores)
 non_equal_number_review = letter_score_to_number_score_converter(review_without_missing_scores)
 # common_denom_scores_with_nan = new_number_score_to_common_score_converter(non_equal_number_review)
@@ -342,7 +342,7 @@ graphical_list = occurrences_of_scores(sorted_data)
 df = pd.DataFrame(sorted_data, columns=['Score'])
 
 bar_graph_data_representation(graphical_list)
-pie_chart_representation(graphical_list)
+# pie_chart_representation(graphical_list)
 
 
 def search_with_selenium(movie_to_search="Dune"):
