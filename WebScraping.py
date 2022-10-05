@@ -10,6 +10,7 @@ import functools
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium import webdriver
+import chromedriver_autoinstaller
 
 
 """
@@ -205,10 +206,13 @@ def how_big_data_size():
     return int(data_size)
 
 
+chromedriver_autoinstaller.install()
+
 def selenium_initializer():
     full_review_list = []
     # s = Service("C:/Webdriver/bin/chromedriver.exe")
     s = Service("C:\Program Files\Google\Chrome\Application\chromedriver.exe")
+    # s = Service("./driver/Application/chromedriver.exe")
     with webdriver.Chrome(service=s) as driver:
         driver.get("https://www.rottentomatoes.com/m/dune_2021/reviews")
 
@@ -333,13 +337,12 @@ non_equal_number_review = letter_score_to_number_score_converter(review_without_
 # common_denom_scores_with_nan = new_number_score_to_common_score_converter(non_equal_number_review)
 data_without_nan = new_number_score_to_common_score_converter(non_equal_number_review)
 sorted_data = sorted(data_without_nan, key=lambda x: (len(x), x))
-
 graphical_list = occurrences_of_scores(sorted_data)
 
 df = pd.DataFrame(sorted_data, columns=['Score'])
 
 bar_graph_data_representation(graphical_list)
-# pie_chart_representation(graphical_list)
+pie_chart_representation(graphical_list)
 
 
 def search_with_selenium(movie_to_search="Dune"):
@@ -388,5 +391,11 @@ def search_with_selenium(movie_to_search="Dune"):
 
 # search_with_selenium()
 
-
+# How to access dir in javascript
+# increment with this and count in memory
+# best frontend portfolio libraries for impressive portfolios (3D libraries worth it?)
+# react or jquery or JS for portfolio logic
+# functional and procedural programming
+# analysis application like postgres or mongo
+# create your own prototypes
 
