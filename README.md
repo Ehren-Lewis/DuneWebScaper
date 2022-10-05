@@ -38,7 +38,7 @@ Some challenges faced during development was Chrome. Chrome updating to a later 
 5. All the content of the repository will be available after completion of the previous state.
 6. Open the application into your code editor of choice
 7. Navigate into the root directory
-8. Run pip install -r requirements.txt
+8. Run pip install -r requirements.txt --user
 9. Run python WebScraping.py
     
 
